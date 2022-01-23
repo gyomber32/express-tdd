@@ -1,13 +1,10 @@
 const TodoController = require("../../controllers/todo.controller");
-const TodoModel = require("../../model/todo.model");
 const httpMocks = require("node-mocks-http");
 const newTodo = require('../mock-data/new-todo.json');
 const allTodos = require('../mock-data/all-todos.json');
+const TodoModel = require("../../model/todo.model");
 
-TodoModel.create = jest.fn();
-TodoModel.find = jest.fn();
-TodoModel.findById = jest.fn();
-TodoModel.findByIdAndUpdate = jest.fn();
+jest.mock("../../model/todo.model");
 
 let req, res, next;
 const todoId = "61e9e1b823d939fb0095047c";
@@ -18,7 +15,43 @@ beforeEach(() => {
   next = jest.fn();
 });
 
-describe("TodoController.updatetodo", () => {
+describe("TodoController.deleteTodo", () => {
+  it("should have a deleteTodo function", () => {
+    expect(typeof TodoController.deleteTodo).toBe("function");
+  });
+
+  it("should call findByIdAndDelete is called", async () => {
+    req.params.todoId = todoId;
+    await TodoController.deleteTodo(req, res, next);
+    expect(TodoModel.findByIdAndDelete).toHaveBeenCalledWith(todoId);
+  });
+
+  it("should return 200 OK and deleted TodoModel", async () => {
+    req.params.todoId = todoId;
+    TodoModel.findByIdAndDelete.mockReturnValue(newTodo);
+    await TodoController.deleteTodo(req, res, next);
+    expect(res.statusCode).toBe(200);
+    expect(res._getJSONData()).toStrictEqual(newTodo);
+    expect(res._isEndCalled()).toBeTruthy();
+  });
+
+  it("should handle errors", async () => {
+    const errorMessage = { message: "Error deleting" };
+    const rejectedPromise = Promise.reject(errorMessage);
+    TodoModel.findByIdAndDelete.mockReturnValue(rejectedPromise);
+    await TodoController.deleteTodo(req, res, next);
+    expect(next).toBeCalledWith(errorMessage);
+  });
+
+  it("should handle 404", async () => {
+    TodoModel.findByIdAndDelete.mockReturnValue(null);
+    await TodoController.deleteTodo(req, res, next);
+    expect(res.statusCode).toBe(404);
+    expect(res._isEndCalled()).toBeTruthy();
+  });
+});
+
+describe("TodoController.updateTodo", () => {
 
   it("should have a updateTodo function", () => {
     expect(typeof TodoController.updateTodo).toBe("function");
